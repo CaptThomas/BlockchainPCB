@@ -3,10 +3,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 import joblib
+from sklearn.preprocessing import OneHotEncoder
 
 from block import Blockchain
 from block import Block
 from generate_bitcoin_transactions import generate_bitcoin_transactions_csv
+
 
 # Generate Transaction Validation Model
 def generate_transaction_validator_model():
@@ -17,9 +19,13 @@ def generate_transaction_validator_model():
     features = bitcoin_transactions[["prompt", "previous_block_hash"]]
     labels = bitcoin_transactions["validity"]
 
+    # One-hot encode the categorical features
+    encoder = OneHotEncoder(sparse=False)
+    features_encoded = encoder.fit_transform(features)
+
     # Split the data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(
-        features, labels, test_size=0.2, random_state=42
+        features_encoded, labels, test_size=0.2, random_state=42
     )
 
     # Initialize and train the logistic regression model
@@ -41,9 +47,13 @@ def generate_component_list_generator_model():
     features = bitcoin_transactions["prompt"]
     target = bitcoin_transactions["component_list"]
 
+    # One-hot encode the categorical feature
+    encoder = OneHotEncoder(sparse=False)
+    features_encoded = encoder.fit_transform(features.to_numpy().reshape(-1, 1))
+
     # Split the data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(
-        features, target, test_size=0.2, random_state=42
+        features_encoded, target, test_size=0.2, random_state=42
     )
 
     # Initialize and train the random forest classifier model
