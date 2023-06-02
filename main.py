@@ -7,7 +7,7 @@ from sklearn.preprocessing import OneHotEncoder
 
 from block import Blockchain
 from block import Block
-from generate_bitcoin_transactions import generate_bitcoin_transactions_csv
+from generate_bitcoin_transactions import generate_bitcoin_transactions_csv, generate_pcb_projects_csv
 
 
 # Generate Transaction Validation Model
@@ -80,6 +80,7 @@ except FileNotFoundError:
 # Create a new blockchain instance
 blockchain = Blockchain()
 generate_bitcoin_transactions_csv(100)
+generate_pcb_projects_csv(50)
 # Load historical Bitcoin transactions dataset
 bitcoin_transactions = pd.read_csv("bitcoin_transactions.csv")
 
