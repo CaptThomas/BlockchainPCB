@@ -3,20 +3,23 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 import joblib
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder, LabelEncoder
 
 from block import Blockchain
 from block import Block
-from generate_bitcoin_transactions import generate_bitcoin_transactions_csv, generate_pcb_projects_csv
+from generate_bitcoin_transactions import (
+    generate_bitcoin_transactions_csv,
+    generate_pcb_projects_csv,
+)
 
 
 # Generate Transaction Validation Model
 def generate_transaction_validator_model():
-    # Load historical Bitcoin transactions dataset
+    # Load bitcoin transactions dataset
     bitcoin_transactions = pd.read_csv("bitcoin_transactions.csv")
 
     # Preprocess the data and split into features and labels
-    features = bitcoin_transactions[["prompt", "previous_block_hash"]]
+    features = bitcoin_transactions[["transaction_id"]]
     labels = bitcoin_transactions["validity"]
 
     # One-hot encode the categorical features
@@ -40,30 +43,24 @@ def generate_transaction_validator_model():
 
 # Generate Component List Generation Model
 def generate_component_list_generator_model():
-    # Load historical Bitcoin transactions dataset
-    bitcoin_transactions = pd.read_csv("bitcoin_transactions.csv")
+    # Load PCB projects dataset
+    pcb_projects = pd.read_csv("pcb_projects.csv")
 
     # Preprocess the data and split into features and target (component list)
-    features = bitcoin_transactions["prompt"]
-    target = bitcoin_transactions["component_list"]
+    features = pcb_projects["prompt"].values.reshape(-1, 1)
+    component_lists = pcb_projects["component_list"].values
 
-    # One-hot encode the categorical feature
-    encoder = OneHotEncoder(sparse=False)
-    features_encoded = encoder.fit_transform(features.to_numpy().reshape(-1, 1))
+    # Encode the prompt strings into numerical values
+    label_encoder = LabelEncoder()
+    encoded_features = label_encoder.fit_transform(features.flatten())
 
-    # Split the data into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(
-        features_encoded, target, test_size=0.2, random_state=42
-    )
-
-    # Initialize and train the random forest classifier model
+    # Create and fit the component list generator model
     component_list_generator_model = RandomForestClassifier()
-    component_list_generator_model.fit(X_train, y_train)
+    component_list_generator_model.fit(encoded_features.reshape(-1, 1), component_lists)
 
-    # Save the trained model
+    # Dump the component list generator model to a pickle file
     joblib.dump(component_list_generator_model, "component_list_generator_model.pkl")
-
-    print("Component List Generation Model generated successfully.")
+    print("Component List Generator Model saved successfully.")
 
 
 # Generate the machine learning models if they don't exist
@@ -81,18 +78,17 @@ except FileNotFoundError:
 blockchain = Blockchain()
 generate_bitcoin_transactions_csv(100)
 generate_pcb_projects_csv(50)
-# Load historical Bitcoin transactions dataset
-bitcoin_transactions = pd.read_csv("bitcoin_transactions.csv")
+# Load PCB projects dataset
+pcb_projects = pd.read_csv("pcb_projects.csv")
 
-# Iterate over the transactions and add them to the blockchain
-for _, transaction in bitcoin_transactions.iterrows():
-    prompt = transaction["prompt"]
+# Iterate over the PCB projects and add them to the blockchain
+for _, project in pcb_projects.iterrows():
+    prompt = project["prompt"]
     previous_block = blockchain.get_previous_block()
-    components = transaction["components"]
     is_valid = transaction_validator_model.predict([[prompt, previous_block]])[0]
 
     if is_valid:
-        component_list = component_list_generator_model.predict([prompt])[0]
+        component_list = component_list_generator_model.predict([[prompt]])[0]
         blockchain.add_transaction(prompt, component_list)
 
 # Mine a new block to include the validated transactions
